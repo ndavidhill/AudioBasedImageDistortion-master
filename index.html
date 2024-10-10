@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Visualization with Text Animation and Image Cycling</title>
+    <style>
+        @font-face {
+            font-family: 'CustomFont';
+            src: url('/fonts/FTPSans-Regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            font-family: 'CustomFont', Arial, sans-serif;
+            overflow: hidden;
+        }
+        #toggle-btn {
+            position: absolute;
+            left: 60px;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            background-color: rgba(51, 51, 51, 0);
+            border: none;
+            border-radius: 50%;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #toggle-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: #000;
+        }
+        #text-container {
+            position: absolute;
+            text-align: center;
+            font-size: 36px;
+            color: black;
+            max-width: 80%;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            z-index: 5;
+            text-shadow: 0px 0px 10px rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <button id="toggle-btn">
+        <svg viewBox="0 0 24 24" id="play-icon">
+            <path d="M8 5v14l11-7z"/>
+        </svg>
+        <svg viewBox="0 0 24 24" id="pause-icon" style="display: none;">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+        </svg>
+    </button>
+    <div id="text-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
+    <script>
+    const s = (p) => {
+        let demo1Shader, images = [], fft, audio, toggleBtn, playIcon, pauseIcon;
+        let isPlaying = true;
+        let currentImageIndex = 0;
+        let nextImageIndex = 1;
+        let blendFactor = 0;
+        
+        p.preload = () => {
+            audio = p.loadSound('audio/demo1.mp3', () => {
+                audio.loop();
+                updatePlayPauseIcon();
+            });
+            demo1Shader = p.loadShader('shaders/base.vert', 'shaders/d1.frag');
+            for (let i = 1; i <= 4; i++) {
+                images.push(p.loadImage(`img/Texture${i}.png`));
+            }
+        }
+        
+        p.setup = () => {
+            p.pixelDensity(1);
+            p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
+            
+            toggleBtn = document.querySelector('#toggle-btn');
+            playIcon = document.querySelector('#play-icon');
+            pauseIcon = document.querySelector('#pause-icon');
+            toggleBtn.addEventListener('click', toggleAudio);
+            
+            fft = new p5.FFT();
+            p.shader(demo1Shader);
+            demo1Shader.setUniform('u_resolution', [p.windowWidth, p.windowHeight]);
+            demo1Shader.setUniform('u_texture1', images[currentImageIndex]);
+            demo1Shader.setUniform('u_texture2', images[nextImageIndex]);
+            demo1Shader.setUniform('u_tResolution', [images[0].width, images[0].height]);
+        }
+        
+        p.draw = () => {
+            fft.analyze();
+            const bass = fft.getEnergy("bass");
+            const treble = fft.getEnergy("treble");
+            const mid = fft.getEnergy("mid");
+            const mapBass = p.map(bass, 0, 255, 10, 15.0);
+            const mapTremble = p.map(treble, 0, 255, 0, 0.0);
+            const mapMid = p.map(mid, 0, 255, 0.0, 0.1);
+            
+            demo1Shader.setUniform('u_time', p.frameCount / 20);
+            demo1Shader.setUniform('u_bass', mapBass);
+            demo1Shader.setUniform('u_tremble', mapTremble);
+            demo1Shader.setUniform('u_mid', mapMid);
+            demo1Shader.setUniform('u_blend', blendFactor);
+            
+            p.rect(0,0, p.width, p.height);
+            
+            // Update blend factor and cycle images
+            blendFactor += 0.005;
+            if (blendFactor >= 1) {
+                blendFactor = 0;
+                currentImageIndex = nextImageIndex;
+                nextImageIndex = (nextImageIndex + 1) % images.length;
+                demo1Shader.setUniform('u_texture1', images[currentImageIndex]);
+                demo1Shader.setUniform('u_texture2', images[nextImageIndex]);
+            }
+        }
+        
+        p.windowResized = () => {
+            p.resizeCanvas(p.windowWidth, p.windowHeight);
+            demo1Shader.setUniform('u_resolution', [p.windowWidth, p.windowHeight]);
+        }
+        
+        function toggleAudio() {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                audio.loop();
+            } else {
+                audio.pause();
+            }
+            updatePlayPauseIcon();
+        }
+
+        function updatePlayPauseIcon() {
+            if (isPlaying) {
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+            } else {
+                playIcon.style.display = 'block';
+                pauseIcon.style.display = 'none';
+            }
+        }
+    };
+
+    new p5(s);
+
+    // Text Animation
+    const lines = [
+        "WHY DO ALL THE CARS, PHONES,<br> AND BUILDINGS LOOK THE SAME?",
+        "BECAUSE THE BUSINESS WORLD<br> VALUES",
+        "INCREMENTAL COST-CUTTING,<br>TIME-SAVING STANDARDISATION,",
+        "AND RISK-AVERSE ITERATION.",
+        "BUT SHOULD WE BE WILLING<br>TO ACCEPT,",
+        "THAT TO DELIVER OR SELL<br>OR INCENTIVISE,",
+        "WE HAVE TO SACRIFICE BEAUTY AND<br>MEANING AND WARMTH AND PASSION?",
+        "WE SAY NO.",
+        "WE BELIEVE…"
+    ];
+
+    const textContainer = document.getElementById('text-container');
+    let currentIndex = 0;
+
+    function showNextLine() {
+        textContainer.style.opacity = 0;
+        
+        setTimeout(() => {
+            textContainer.innerHTML = lines[currentIndex];
+            textContainer.style.opacity = 1;
+            
+            if (currentIndex < lines.length - 1) {
+                currentIndex++;
+                setTimeout(showNextLine, 3000); // Wait for 3 seconds before fading out
+            }
+        }, 1000); // Wait for 1 second after fade out before showing next line
+    }
+
+    showNextLine();
+    </script>
+</body>
+</html>
