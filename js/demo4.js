@@ -1,70 +1,70 @@
 const s = (p) => {
-  let demo4Shader, img, d_map, fft, audio, toggleBtn
+  let demo4Shader, img, d_map, fft, audio, toggleBtn;
+  let isAudioPlaying = false;
 
   p.preload = () => {
-    audio = p.loadSound('audio/demo4.mp3')
-    demo4Shader = p.loadShader('shaders/base.vert', 'shaders/d4.frag')
-    img = p.loadImage('img/4.jpg')
-    d_map = p.loadImage('img/clouds.jpg')
+    audio = p.loadSound('audio/demo4.mp3');
+    demo4Shader = p.loadShader('shaders/base.vert', 'shaders/d4.frag');
+    img = p.loadImage('img/Texture1.png');
+    d_map = p.loadImage('img/clouds.jpg');
   }
 
   p.setup = () => {
-      playBtn = document.querySelector('#play-btn')
-      playBtn.addEventListener('click', () => {
-        document.body.classList.add('start-anim')
-        audio.loop()
-      })
+    p.pixelDensity(1);
+    p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
 
-      p.pixelDensity(1)
-      p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL)
+    toggleBtn = document.querySelector('#toggle-btn');
+    toggleBtn.addEventListener('click', toggleAudio);
 
-      toggleBtn = document.querySelector('#toggle-btn')
-      toggleBtn.addEventListener('click', () => {
-        toggleBtn.classList.toggle('toggle--on')
-        this.toggleAudio()
-      })
+    fft = new p5.FFT();
+    p.shader(demo4Shader);
+    demo4Shader.setUniform('u_resolution', [p.windowWidth, p.windowHeight]);
+    demo4Shader.setUniform('d_map', d_map);
+    demo4Shader.setUniform('img', img);
+    demo4Shader.setUniform('u_tResolution', [img.width, img.height]);
 
-      fft = new p5.FFT()
-      p.shader(demo4Shader)
-      demo4Shader.setUniform('u_resolution', [p.windowWidth, p.windowHeight])
-      demo4Shader.setUniform('d_map', d_map)
-      demo4Shader.setUniform('img', img)
-      demo4Shader.setUniform('u_tResolution', [img.width, img.height])
+    // Don't start audio initially
+    isAudioPlaying = false;
   }
 
   p.draw = () => {
-    p.background(0)
+    p.background(0);
 
-    fft.analyze()
+    let bass = 0;
+    let mid = 0;
 
-    const bass    = fft.getEnergy("bass")
-    const treble  = fft.getEnergy("treble")
-    const mid     = fft.getEnergy("mid")
+    if (isAudioPlaying) {
+      fft.analyze();
+      bass = fft.getEnergy("bass");
+      mid = fft.getEnergy("mid");
+    }
 
-    const mapBass     = p.map(bass, 0, 255, 0, 0.02)
-    const mapMid     = p.map(mid, 0, 70, 0, 10.001)
+    const mapBass = p.map(bass, 0, 255, 0, 0.02);
+    const mapMid = p.map(mid, 0, 70, 0, 10.001);
 
-    // let fc = p.map(p.frameCount, 0, 1000, 0.0, 2.5)
-    const tc = p.map(audio.currentTime(), 0, audio.duration(), 2.0, 2.0)
-    demo4Shader.setUniform('u_time', tc)
-    demo4Shader.setUniform('u_bass', mapBass)
-    demo4Shader.setUniform('u_mid', mapMid)
+    const tc = isAudioPlaying ? p.map(audio.currentTime(), 0, audio.duration(), 2.0, 2.0) : p.frameCount * 0.01;
+    demo4Shader.setUniform('u_time', tc);
+    demo4Shader.setUniform('u_bass', mapBass);
+    demo4Shader.setUniform('u_mid', mapMid);
 
-    p.rect(0, 0 , p.width, p.height)
+    p.rect(0, 0, p.width, p.height);
   }
 
   p.windowResized = () => {
-    p.resizeCanvas(p.windowWidth, p.windowHeight)
-    demo4Shader.setUniform('u_resolution', [p.windowWidth, p.windowHeight])
+    p.resizeCanvas(p.windowWidth, p.windowHeight);
+    demo4Shader.setUniform('u_resolution', [p.windowWidth, p.windowHeight]);
   }
 
-  toggleAudio = () => {
-    if (audio.isPlaying()) {
-      audio.pause()
+  function toggleAudio() {
+    isAudioPlaying = !isAudioPlaying;
+    if (isAudioPlaying) {
+      audio.loop();
+      toggleBtn.classList.add('toggle--on');
     } else {
-      audio.loop()
+      audio.pause();
+      toggleBtn.classList.remove('toggle--on');
     }
   }
 };
 
-new p5(s)
+new p5(s);
