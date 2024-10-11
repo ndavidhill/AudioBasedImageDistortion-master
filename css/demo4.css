@@ -1,6 +1,7 @@
 @font-face {
     font-family: 'FTPSans';
-    src: url('/fonts/ferritecore-regular-webfont.woff2') format('woff2');
+    src: url('/fonts/FTPSans-Regular.woff') format('woff');
+    src: url('/fonts/FTPSans-Regular.ttf') format('ttf');
     font-weight: normal;
     font-style: normal;
 }
