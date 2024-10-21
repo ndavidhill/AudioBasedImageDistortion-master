@@ -1,11 +1,15 @@
 const s = (p) => {
-  let demo4Shader, img, d_map, fft, audio, toggleBtn;
+  let demo4Shader, images = [], d_map, fft, audio, toggleBtn;
   let isAudioPlaying = false;
+  let currentImageIndex = 0;
+  let blendFactor = 0;
 
   p.preload = () => {
     audio = p.loadSound('audio/demo4.mp3');
     demo4Shader = p.loadShader('shaders/base.vert', 'shaders/d4.frag');
-    img = p.loadImage('img/Texture1.png');
+    for (let i = 1; i <= 5; i++) {
+      images.push(p.loadImage(`img/Texture${i}.png`));
+    }
     d_map = p.loadImage('img/clouds.jpg');
   }
 
@@ -20,10 +24,10 @@ const s = (p) => {
     p.shader(demo4Shader);
     demo4Shader.setUniform('u_resolution', [p.windowWidth, p.windowHeight]);
     demo4Shader.setUniform('d_map', d_map);
-    demo4Shader.setUniform('img', img);
-    demo4Shader.setUniform('u_tResolution', [img.width, img.height]);
+    demo4Shader.setUniform('img1', images[0]);
+    demo4Shader.setUniform('img2', images[1]);
+    demo4Shader.setUniform('u_tResolution', [images[0].width, images[0].height]);
 
-    // Don't start audio initially
     isAudioPlaying = false;
   }
 
@@ -46,6 +50,15 @@ const s = (p) => {
     demo4Shader.setUniform('u_time', tc);
     demo4Shader.setUniform('u_bass', mapBass);
     demo4Shader.setUniform('u_mid', mapMid);
+
+    blendFactor += 0.005;
+    if (blendFactor > 1) {
+      blendFactor = 0;
+      currentImageIndex = (currentImageIndex + 1) % 5;
+      demo4Shader.setUniform('img1', images[currentImageIndex]);
+      demo4Shader.setUniform('img2', images[(currentImageIndex + 1) % 5]);
+    }
+    demo4Shader.setUniform('u_blend', blendFactor);
 
     p.rect(0, 0, p.width, p.height);
   }
